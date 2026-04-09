@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스트리머 프로필</title>
+    <style>
+        /* [테마 컬러 설정: 발로란트 무드 + 다크톤 종합게임] */
+        :root {
+            --bg-dark: #0f1923;
+            --main-red: #ff4655;
+            --text-light: #ece8e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* [상단 배너] */
+        .banner {
+            width: 100%;
+            height: 280px;
+            background-color: transparent; /* 비워둠 */
+            border-bottom: 3px solid var(--main-red);
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* [메인 레이아웃] */
+        .main-container {
+            max-width: 1200px;
+            margin: -60px auto 0;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 30px;
+            position: relative;
+        }
+
+        /* 공통 박스 디자인 (발로란트 스타일의 사선 컷아웃) */
+        .box {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+        }
+
+        /* [좌측 영역] */
+        .left-col { display: flex; flex-direction: column; gap: 20px; }
+        
+        .profile-img {
+            width: 160px;
+            height: 160px;
+            background-color: transparent; /* 비워둠 */
+            border-radius: 50%;
+            border: 4px solid var(--bg-dark);
+            margin: 0 auto;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .games-list { min-height: 250px; }
+
+        /* [중앙 영역] */
+        .center-col { padding-top: 70px; display: flex; flex-direction: column; gap: 15px; }
+        
+        .nickname {
+            font-size: 2.5rem;
+            font-weight: 800;
+            min-height: 50px; /* 비어있어도 클릭할 수 있게 높이 확보 */
+            margin: 0;
+        }
+        
+        .intro-text {
+            line-height: 1.7;
+            color: #b0b0b0;
+            min-height: 200px;
+        }
+
+        /* [우측 영역] */
+        .right-col { padding-top: 70px; display: flex; flex-direction: column; gap: 20px; }
+        .links-area { min-height: 300px; }
+
+        /* [편집 모드 시각적 피드백] */
+        .editable { outline: none; }
+        .edit-mode-active {
+            outline: 2px dashed var(--main-red) !important;
+            background: rgba(255, 70, 85, 0.05) !important;
+        }
+        .edit-mode-active:hover { cursor: text; }
+        .editable-img.edit-mode-active:hover { cursor: pointer; }
+
+        /* =========================================
+           [드래그 가능한 콘솔 UI (스위치 스타일)]
+           ========================================= */
+        .console-controller {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            background: rgba(20, 20, 20, 0.4);
+            border-radius: 50px;
+            padding: 15px 25px;
+            display: flex;
+            gap: 50px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            opacity: 0.3; /* 평소엔 눈에 띄지 않게 */
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            cursor: grab;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .console-controller:hover, .console-controller:active { opacity: 1; }
+        .console-controller:active { cursor: grabbing; }
+
+        .joycon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            pointer-events: none; /* 배경 드래그를 위해 */
+        }
+
+        /* 조이스틱 컨테이너 & 스틱 */
+        .joystick-container {
+            width: 45px;
+            height: 45px;
+            background: #1a1a1a;
+            border-radius: 50%;
+            border: 2px solid #111;
+            box-shadow: inset 0 0 15px #000, 0 2px 4px rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto; /* 여긴 드래그 되게 */
+        }
+
+        .joystick {
+            width: 30px;
+            height: 30px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.2), 0 5px 10px rgba(0,0,0,0.8);
+            cursor: pointer;
+            /* 움직일 때 자연스럽게 제자리로 돌아오도록 */
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        .d-pad, .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 25px);
+            grid-template-rows: repeat(3, 25px);
+            gap: 3px;
+            pointer-events: auto; /* 버튼 클릭 되게 */
+        }
+
+        .btn {
+            width: 22px;
+            height: 22px;
+            background: #333;
+            color: #888;
+            font-size: 11px;
+            font-weight: 900;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 2px 0 #111;
+        }
+
+        .btn:active {
+            background: var(--main-red);
+            color: #fff;
+            transform: translateY(2px);
+            box-shadow: 0 0 0 #111;
+        }
+
+        /* 스위치 레이아웃 위치 */
+        .pos-top { grid-column: 2; grid-row: 1; }
+        .pos-left { grid-column: 1; grid-row: 2; }
+        .pos-right { grid-column: 3; grid-row: 2; }
+        .pos-bot { grid-column: 2; grid-row: 3; }
+
+        /* 화살표 모양 기호 */
+        .d-pad .pos-top::before { content: "▲"; font-size: 8px; }
+        .d-pad .pos-left::before { content: "◀"; font-size: 8px; }
+        .d-pad .pos-right::before { content: "▶"; font-size: 8px; }
+        .d-pad .pos-bot::before { content: "▼"; font-size: 8px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="banner editable-img editable" data-type="bg"></div>
+
+    <div class="main-container">
+        <div class="left-col">
+            <div class="profile-img editable-img editable" data-type="bg"></div>
+            <div class="box games-list editable-txt editable"></div>
+        </div>
+
+        <div class="center-col">
+            <h1 class="nickname editable-txt editable"></h1>
+            <div class="intro-text editable-txt editable"></div>
+        </div>
+
+        <div class="right-col">
+            <div class="box links-area editable-txt editable"></div>
+        </div>
+    </div>
+
+    <div class="console-controller" id="draggableConsole">
+        <div class="joycon">
+            <div class="joystick-container">
+                <div class="joystick"></div>
+            </div>
+            <div class="d-pad">
+                <div class="btn pos-top"></div>
+                <div class="btn pos-left"></div>
+                <div class="btn pos-right"></div>
+                <div class="btn pos-bot"></div>
+            </div>
+        </div>
+
+        <div class="joycon">
+            <div class="action-buttons">
+                <div class="btn pos-top" data-key="X">X</div>
+                <div class="btn pos-left" data-key="Y">Y</div>
+                <div class="btn pos-right" data-key="A">A</div>
+                <div class="btn pos-bot" data-key="B">B</div>
+            </div>
+            <div class="joystick-container">
+                <div class="joystick"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================
+           [1] 이스터에그 및 편집 모드 로직
+           ========================================= */
+        const secretCode = ['X', 'B', 'A', 'Y', 'X', 'B', 'A', 'Y', 'B', 'B'];
+        let inputQueue = [];
+        let isEditMode = false;
+
+        const actionButtons = document.querySelectorAll('.action-buttons .btn');
+        
+        actionButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const key = e.target.getAttribute('data-key');
+                if (!key) return;
+
+                // 편집 모드일 때 'B'를 누르면 즉시 취소(종료)
+                if (isEditMode && key === 'B') {
+                    toggleEditMode(false);
+                    inputQueue = [];
+                    return;
+                }
+
+                inputQueue.push(key);
+                if (inputQueue.length > secretCode.length) {
+                    inputQueue.shift();
+                }
+
+                if (inputQueue.join('') === secretCode.join('')) {
+                    toggleEditMode(true);
+                    inputQueue = [];
+                }
+            });
+        });
+
+        function toggleEditMode(forceState) {
+            isEditMode = forceState;
+            const textEls = document.querySelectorAll('.editable-txt');
+            const imgEls = document.querySelectorAll('.editable-img');
+
+            if (isEditMode) {
+                textEls.forEach(el => {
+                    el.contentEditable = "true";
+                    el.classList.add('edit-mode-active');
+                });
+                imgEls.forEach(el => {
+                    el.classList.add('edit-mode-active');
+                    el.addEventListener('click', handleImageEdit);
+                });
+            } else {
+                textEls.forEach(el => {
+                    el.contentEditable = "false";
+                    el.classList.remove('edit-mode-active');
+                });
+                imgEls.forEach(el => {
+                    el.classList.remove('edit-mode-active');
+                    el.removeEventListener('click', handleImageEdit);
+                });
+            }
+        }
+
+        function handleImageEdit(e) {
+            if (!isEditMode) return;
+            const url = prompt("적용할 이미지의 URL을 입력하세요 (ex: https://...)");
+            if (url) {
+                e.currentTarget.style.backgroundImage = `url('${url}')`;
+            }
+        }
+
+        /* =========================================
+           [2] 콘솔 드래그(Drag & Drop) 로직
+           ========================================= */
+        const consoleEl = document.getElementById('draggableConsole');
+        let isDraggingConsole = false;
+        let currentX = 0, currentY = 0;
+        let initialX, initialY;
+        let xOffset = 0, yOffset = 0;
+
+        consoleEl.addEventListener('mousedown', (e) => {
+            // 버튼이나 조이스틱을 건드렸을 땐 콘솔이 드래그되지 않게 방어
+            if (e.target.closest('.btn') || e.target.closest('.joystick')) return;
+            
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            isDraggingConsole = true;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDraggingConsole) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                consoleEl.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDraggingConsole = false;
+        });
+
+        /* =========================================
+           [3] 조이스틱 움직임 (물리 텐션) 로직
+           ========================================= */
+        const joysticks = document.querySelectorAll('.joystick');
+        
+        joysticks.forEach(stick => {
+            let isDraggingStick = false;
+            let stickStartX, stickStartY;
+
+            stick.addEventListener('mousedown', (e) => {
+                isDraggingStick = true;
+                stickStartX = e.clientX;
+                stickStartY = e.clientY;
+                stick.style.transition = 'none'; // 움직일 땐 애니메이션 끄기 (마우스 따라오게)
+                e.stopPropagation(); // 이벤트 버블링 막아서 콘솔 드래그 방지
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDraggingStick) return;
+                
+                let dx = e.clientX - stickStartX;
+                let dy = e.clientY - stickStartY;
+
+                // 조이스틱이 원 밖으로 나가지 않게 최대 반경 제한 (12px)
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxRadius = 12;
+                
+                if (distance > maxRadius) {
+                    dx = (dx / distance) * maxRadius;
+                    dy = (dy / distance) * maxRadius;
+                }
+
+                stick.style.transform = `translate(${dx}px, ${dy}px)`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDraggingStick) {
+                    isDraggingStick = false;
+                    // 마우스를 놓으면 튕기듯 제자리로 복귀
+                    stick.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    stick.style.transform = `translate(0px, 0px)`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
